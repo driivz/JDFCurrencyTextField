@@ -16,9 +16,6 @@
 @property (nonatomic, strong) NSNumberFormatter *currencyFormatter;
 @property (nonatomic, strong) NSNumberFormatter *decimalFormatter;
 
-// Delegate
-@property (nonatomic, weak) id<UITextFieldDelegate> realDelegate;
-
 @end
 
 
@@ -33,11 +30,6 @@
 {
     [super setText:text];
     [self formatTextAfterEditing];
-}
-
-- (void)setDelegate:(id<UITextFieldDelegate>)delegate
-{
-    self.realDelegate = delegate;
 }
 
 - (void)setKeyboardType:(UIKeyboardType)keyboardType
@@ -125,9 +117,27 @@
 
 - (void)customInit
 {
-    [super setDelegate:self];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(formatTextInPreparationForEditing)
+                                                 name:UITextFieldTextDidBeginEditingNotification
+                                               object:self];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(formatTextAfterEditing)
+                                                 name:UITextFieldTextDidEndEditingNotification
+                                               object:self];
+
     self.keyboardType = UIKeyboardTypeDecimalPad;
     [self formatTextAfterEditing];
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UITextFieldTextDidBeginEditingNotification
+                                                  object:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UITextFieldTextDidEndEditingNotification
+                                                  object:self];
 }
 
 
@@ -181,44 +191,6 @@
         NSNumber *number = [self.decimalFormatter numberFromString:resultantString];
         return (number ? YES : NO) || resultantString.length == 0;
     }
-}
-
-
-#pragma mark - UITextFieldDelegate
-
--(void)textFieldDidBeginEditing:(UITextField *)textField
-{
-    [self formatTextInPreparationForEditing];
-    if ([self.realDelegate respondsToSelector:@selector(textFieldDidBeginEditing:)]) {
-        [self.realDelegate textFieldDidBeginEditing:self];
-    }
-}
-
-- (void)textFieldDidEndEditing:(UITextField *)textField
-{
-    [self formatTextAfterEditing];
-    if ([self.realDelegate respondsToSelector:@selector(textFieldDidEndEditing:)]) {
-        [self.realDelegate textFieldDidEndEditing:self];
-    }
-}
-
-
-#pragma mark - UITextFieldDelegate forwarding
-
-- (BOOL)respondsToSelector:(SEL)aSelector
-{
-    if ([self.realDelegate respondsToSelector:aSelector]) {
-        return YES;
-    }
-    return [super respondsToSelector:aSelector];
-}
-
-- (id)forwardingTargetForSelector:(SEL)aSelector
-{
-    if ([self.realDelegate respondsToSelector:aSelector]) {
-        return self.realDelegate;
-    }
-    return [super forwardingTargetForSelector:aSelector];
 }
 
 @end
